@@ -1,9 +1,20 @@
 from datetime import datetime, date
-from typing import List
+from typing import List, Optional
 
-from pydantic import BaseModel, Field
+from fastapi import HTTPException
+from pydantic import BaseModel as BaseModel_, Field
+from starlette import status
 
 from utils import AllOptional
+
+
+class BaseModel(BaseModel_):
+
+    @classmethod
+    def from_orm(cls, obj):
+        if obj is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Object not found")
+        return super().from_orm(obj)
 
 
 class CreateAuthor(BaseModel):
@@ -61,6 +72,8 @@ class UserSignup(BaseModel):
 class UserOut(BaseModel):
     id: int
     email: str
+    first_name: Optional[str]
+    last_name: Optional[str]
 
     class Config:
         orm_mode = True
@@ -68,6 +81,7 @@ class UserOut(BaseModel):
 
 class CreateGenre(BaseModel):
     name: str
+
 
 class BaseGenre(BaseModel):
     id: int
@@ -113,6 +127,27 @@ class RetrieveBook(CreatBook):
     id: int
     authors: List[RetrieveBookAuthor]
     genres: List[RetrieveBookGenre]
+    reviews: List['RetrieveReview']
+    available_quantity: int
+
+    class Config:
+        orm_mode = True
+
+
+class CreateReview(BaseModel):
+    title: str
+    created_at: datetime
+    rate: int
+    content: str
+
+
+class UpdateReview(CreateReview, metaclass=AllOptional):
+    ...
+
+
+class RetrieveReview(CreateReview):
+    id: int
+    user: UserOut
 
     class Config:
         orm_mode = True
@@ -120,3 +155,4 @@ class RetrieveBook(CreatBook):
 
 RetrieveAuthor.update_forward_refs()
 RetrieveGenre.update_forward_refs()
+RetrieveBook.update_forward_refs()

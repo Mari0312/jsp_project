@@ -1,10 +1,12 @@
 from typing import List
 
-from fastapi import APIRouter, Query, Depends
+from fastapi import APIRouter, Query, Depends, HTTPException
+from starlette import status
 
-from database import Book, User, Genre, BookGenre, session, Author, BookAuthor
-from deps import get_current_librarian
-from schemas import RetrieveBook, UpdateBook, CreatBook, RetrieveGenre, CreateGenre, BaseGenre
+from database import Book, User, Genre, BookGenre, session, BookAuthor, Review
+from deps import get_current_librarian, get_current_user
+from schemas import RetrieveBook, UpdateBook, CreatBook, RetrieveGenre, CreateGenre, BaseGenre, RetrieveReview, \
+    CreateReview, UpdateReview
 
 router = APIRouter(prefix='/books')
 
@@ -42,7 +44,7 @@ async def create_book(create_book: CreatBook, _: User = Depends(get_current_libr
 
 
 @router.patch("/{book_id}", response_model=RetrieveBook)
-async def update_book(book_id: int, update_book: UpdateBook, _: User = Depends(get_current_librarian))-> RetrieveBook:
+async def update_book(book_id: int, update_book: UpdateBook, _: User = Depends(get_current_librarian)) -> RetrieveBook:
     data = dict(update_book)
     genres = data.pop('genres')
     authors = data.pop('authors')
@@ -90,6 +92,41 @@ async def get_genre(genre_id: int) -> RetrieveGenre:
 @router.delete("/genre/{genre_id}")
 async def delete(genre_id: int, _: User = Depends(get_current_librarian)):
     count = Genre.delete(genre_id)
+    if count:
+        return {"message": "Deleted"}
+    return ({"message": "Not found"}), 404
+
+
+@router.post("/<book_id>/reviews/", response_model=RetrieveReview)
+async def create_review(book_id: int, create_review: CreateReview, user: User = Depends(get_current_user)):
+    review = Review(**dict(create_review), book_id=book_id, user_id=user.id).save()
+    return RetrieveReview.from_orm(review)
+
+
+@router.patch("/{book_id}/reviews/{review_id}", response_model=RetrieveReview)
+async def update_review(review_id: int, review_data: UpdateReview, user: User = Depends(get_current_user)):
+    review = Review.get(review_id)
+    if review.user_id != user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail='User does not have permissions',
+        )
+
+    Review.update(review_id, **dict(review_data))
+    review = Review.get(review_id)
+    return RetrieveReview.from_orm(review)
+
+
+@router.delete("/{book_id}/reviews/{review_id}")
+async def delete_review_by_id(review_id: int, user: User = Depends(get_current_user)):
+    review = Review.get(review_id)
+    if review.user_id != user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail='User does not have permissions',
+        )
+
+    count = Review.delete(review_id)
     if count:
         return {"message": "Deleted"}
     return ({"message": "Not found"}), 404

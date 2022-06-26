@@ -1,5 +1,4 @@
 import datetime
-from typing import List
 
 from sqlalchemy import Column, String, Integer, DateTime, ForeignKey, Text, Boolean
 from sqlalchemy.orm import relationship
@@ -55,7 +54,6 @@ class Rental(Base):
     name = Column(String(50), nullable=False)
     issue_date = Column(DateTime, nullable=False)
     return_date = Column(DateTime, nullable=False)
-    quantity = Column(Integer, nullable=False)
     user_id = Column(Integer, ForeignKey('users.id'))
     books = relationship("Book", secondary='rental_books', back_populates='rentals')
 
@@ -88,6 +86,10 @@ class Book(Base):
     def find_by_name(cls, name, offset, limit):
         return session.query(cls).filter_by(name=name) \
             .order_by(cls.id).offset(offset).limit(limit).all()
+
+    @property
+    def available_quantity(self):
+        return self.quantity - session.query(RentalBook).filter_by(book_id=self.id).count()
 
 
 class Genre(Base):
@@ -136,7 +138,7 @@ class Review(Base):
 
     id = Column(Integer, primary_key=True)
     title = Column(String(200), nullable=False)
-    date = Column(DateTime, nullable=False)
+    created_at = Column(DateTime, nullable=False)
     rate = Column(Integer, nullable=False)
     content = Column(Text, nullable=False)
     book_id = Column(Integer, ForeignKey('books.id', ondelete="CASCADE"))
