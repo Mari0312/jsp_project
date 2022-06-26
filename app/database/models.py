@@ -1,4 +1,5 @@
 import datetime
+from typing import List
 
 from sqlalchemy import Column, String, Integer, DateTime, ForeignKey, Text, Boolean
 from sqlalchemy.orm import relationship
@@ -56,7 +57,7 @@ class Rental(Base):
     return_date = Column(DateTime, nullable=False)
     quantity = Column(Integer, nullable=False)
     user_id = Column(Integer, ForeignKey('users.id'))
-    books = relationship("Book", secondary='rental_books')
+    books = relationship("Book", secondary='rental_books', back_populates='rentals')
 
     @classmethod
     def find_by_name(cls, name, offset, limit):
@@ -78,9 +79,9 @@ class Book(Base):
     name = Column(String(150), nullable=False)
     description = Column(Text, nullable=False)
     quantity = Column(Integer, nullable=False)
-    authors = relationship("Author", secondary='book_authors')
-    rentals = relationship("Rental", secondary='rental_books')
-    genres = relationship("Genre", secondary='book_genres')
+    authors = relationship("Author", secondary='book_authors', back_populates='books')
+    rentals = relationship("Rental", secondary='rental_books', back_populates='books')
+    genres = relationship("Genre", secondary='book_genres', back_populates='books')
     reviews = relationship("Review", backref="book")
 
     @classmethod
@@ -94,7 +95,7 @@ class Genre(Base):
 
     id = Column(Integer, primary_key=True)
     name = Column(String(150), nullable=False)
-    books = relationship("Book", secondary='book_genres')
+    books = relationship("Book", secondary='book_genres', back_populates='genres')
 
     @classmethod
     def find_by_name(cls, name, offset, limit):
@@ -116,7 +117,7 @@ class Author(Base):
     date_of_birth = Column(DateTime, nullable=False)
     date_of_death = Column(DateTime, nullable=True)
     biography = Column(Text, nullable=True)
-    books = relationship("Book", secondary='book_authors')
+    books = relationship("Book", secondary='book_authors', back_populates='authors')
 
     @classmethod
     def find_by_name(cls, name, offset, limit):

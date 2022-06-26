@@ -2,7 +2,7 @@ from typing import List
 
 from fastapi import APIRouter, Query, Depends
 
-from database import Book, User, Genre
+from database import Book, User, Genre, BookGenre, session, Author, BookAuthor
 from deps import get_current_librarian
 from schemas import RetrieveBook, UpdateBook, CreatBook, RetrieveGenre, CreateGenre, BaseGenre
 
@@ -26,14 +26,38 @@ async def get_book(book_id: int) -> RetrieveBook:
 
 @router.post("/", response_model=RetrieveBook)
 async def create_book(create_book: CreatBook, _: User = Depends(get_current_librarian)):
-    book = Book(**dict(create_book)).save()
+    data = dict(create_book)
+    genres = data.pop('genres')
+    authors = data.pop('authors')
+
+    book = Book(**data).save()
+
+    for author in authors:
+        session.add(BookAuthor(book_id=book.id, author_id=author))
+    for genre in genres:
+        session.add(BookGenre(book_id=book.id, genre_id=genre))
+
+    session.commit()
     return RetrieveBook.from_orm(book)
 
 
 @router.patch("/{book_id}", response_model=RetrieveBook)
 async def update_book(book_id: int, update_book: UpdateBook, _: User = Depends(get_current_librarian))-> RetrieveBook:
-    Book.update(book_id, **dict(update_book))
+    data = dict(update_book)
+    genres = data.pop('genres')
+    authors = data.pop('authors')
+    Book.update(book_id, **data)
     book = Book.get(book_id)
+    book.genres = []
+    book.authors = []
+    session.commit()
+    for author in authors:
+        session.add(BookAuthor(book_id=book.id, author_id=author))
+    for genre in genres:
+        session.add(BookGenre(book_id=book.id, genre_id=genre))
+
+    session.commit()
+
     return RetrieveBook.from_orm(book)
 
 

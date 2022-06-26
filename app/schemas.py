@@ -94,6 +94,9 @@ class CreatBook(BaseModel):
     description: str
     quantity: int
 
+    genres: List[int]
+    authors: List[int]
+
 
 class UpdateBook(CreatBook, metaclass=AllOptional):
     ...
