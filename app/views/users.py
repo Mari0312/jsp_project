@@ -33,6 +33,7 @@ def get_user(user_id):
 
     return jsonify(user.to_dict())
 
+
 @users_bp.route("/<user_id>", methods=["PATCH"])
 @jwt_required()
 def update_user(user_id):
@@ -41,7 +42,6 @@ def update_user(user_id):
     address = request.json.get("address")
     username = request.json.get("username")
     email = request.json.get("address")
-    password = request.json.get("password")
 
     user = User.get(user_id)
     if not user:
@@ -57,8 +57,6 @@ def update_user(user_id):
         user.username = username
     if email:
         user.email = email
-    if password:
-        user.hashed_password = User.generate_hash(password)
     user.save()
     return jsonify(user.to_dict())
 

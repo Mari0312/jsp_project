@@ -1,94 +1,62 @@
-from flask import jsonify, request, Blueprint
-from flask_jwt_extended import (
-    create_access_token,
-    create_refresh_token,
-    get_jwt,
-    jwt_required,
-    get_jwt_identity)
+from fastapi import HTTPException, status, APIRouter, Depends
 
-from app.models import User, RevokedTokenModel
+from app.utils import verify_password, create_access_token, create_refresh_token
+from database import User, RevokedTokenModel
+from deps import get_current_user, token_data
+from schemas import UserAuth, UserOut, TokenSchema, UserSignup, TokenPayload
 
-auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
+router = APIRouter(prefix='/authorization')
 
 
-@auth_bp.route("/registration", methods=["POST"])
-def register():
-    """Method for adding a new user (registration).
-       Returns access and refresh tokens.
-    """
-    if not (request.json and request.json.get("first_name") and request.json.get("password")
-            and request.json.get("birthday") and request.json.get("email") and request.json.get("last_name")):
-        return jsonify(
-            {"message": 'Please, provide "birthday", "first_name", "last_name", "email" and "password" in body.'}), 400
+@router.post('/signup', summary="Create new user", response_model=UserOut)
+async def create_user(data: UserSignup):
+    # querying database to check if user already exist
+    user = User.find_by_email(data.email)
+    if user is not None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User with this email already exist"
+        )
+    user = User(**dict(data)).save()
+    return UserOut.from_orm(user)
 
-    email = request.json["email"]
 
-    if User.find_by_email(email):
-        return {"message": "User already exists"}
+@router.post('/login', summary="Create access and refresh tokens for user", response_model=TokenSchema)
+async def login(form_data: UserAuth):
+    user = User.find_by_email(form_data.email)
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Incorrect email or password"
+        )
 
-    new_user = User(**request.json).save()
-    access_token = create_access_token(identity=new_user.id, additional_claims=new_user.additional_claims)
-    refresh_token = create_refresh_token(identity=new_user.id, additional_claims=new_user.additional_claims)
+    hashed_pass = user.hashed_password
+    if not verify_password(form_data.password, hashed_pass):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Incorrect email or password"
+        )
+
     return {
-        "message": "User was created",
-        'access_token': access_token,
-        'refresh_token': refresh_token
+        "access_token": create_access_token(user.email),
+        "refresh_token": create_refresh_token(user.email),
     }
 
 
-@auth_bp.route("/login", methods=["POST"])
-def login():
-    if not request.json or not request.json.get("email") or not request.json.get("password"):
-        return jsonify({"message": 'Please, provide "email" and "password" in body.'}), 400
-
-    email = request.json["email"]
-    password = request.json["password"]
-    current_user = User.find_by_email(email)
-    if not current_user:
-        return {"message": "User with {} doesn't exist".format(email)}
-
-    if not User.verify_hash(password, current_user.hashed_password):
-        return {"message": "Wrong password"}, 401
-
-    access_token = create_access_token(identity=current_user.id, additional_claims=current_user.additional_claims)
-    refresh_token = create_refresh_token(identity=current_user.id, additional_claims=current_user.additional_claims)
-    return {
-        "message": "Logged in as {}".format(current_user.first_name),
-        'access_token': access_token,
-        'refresh_token': refresh_token
-    }
-
-
-@auth_bp.route("/refresh", methods=["POST"])
-@jwt_required(refresh=True)
-def post():
+@router.post("/refresh")
+def post(user: User = Depends(get_current_user)):
     """Method for refreshing access token. Returns new access token."""
-    current_user_identity = get_jwt_identity()
-    current_user = User.get(current_user_identity)
-    access_token = create_access_token(identity=current_user_identity, additional_claims=current_user.additional_claims)
+    access_token = create_access_token(user.id, **user.additional_claims)
     return {'access_token': access_token}
 
 
-@auth_bp.route("/logout-access", methods=["POST"])
-@jwt_required()
-def logout_access():
-    jti = get_jwt()['jti']
+@router.post("/logout-access")
+def logout_access(token_data: TokenPayload = Depends(token_data)):
     try:
-        RevokedTokenModel(jti=jti).save()
-        return {'message': 'Access token has been revoked'}
+        RevokedTokenModel(jti=token_data.jti).save()
+        return {'message': f'Access token {token_data.jti} has been revoked'}
     except Exception as e:
         return {
                    "message": "Something went wrong while revoking token",
                    "error": repr(e)
                }, 500
-
-
-@auth_bp.route("/logout-refresh", methods=["POST"])
-@jwt_required(refresh=True)
-def logout_refresh():
-    jti = get_jwt()['jti']  # id of a jwt accessing this post method
-    try:
-        RevokedTokenModel(jti=jti).save()
-        return {"message": "Refresh token has been revoked"}
-    except Exception:
-        return {"message": "Something went wrong while revoking token"}, 500

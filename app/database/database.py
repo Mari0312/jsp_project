@@ -1,7 +1,7 @@
 from typing import Type
 
-from sqlalchemy import Column, Integer, update
-from sqlalchemy import create_engine, MetaData
+from sqlalchemy import create_engine
+from sqlalchemy import update
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
@@ -30,12 +30,18 @@ class ModelBase:
         return session.query(cls).filter_by(id=id).first()
 
     @classmethod
+    def list_all(cls):
+        return session.query(cls).order_by(cls.id)
+
+    @classmethod
     def list(cls, offset, limit):
-        return session.query(cls).order_by(cls.id).offset(offset).limit(limit)
+        return cls.list_all().offset(offset).limit(limit)
 
     @classmethod
     def delete(cls, id):
-        return session.query(cls).filter_by(id=id).delete()
+        query = session.query(cls).filter_by(id=id).delete()
+        session.commit()
+        return query
 
     @classmethod
     def update(cls, id, **parameters):
