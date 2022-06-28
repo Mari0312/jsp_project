@@ -64,7 +64,7 @@ class UserSignup(BaseModel):
     password: str = Field(..., min_length=5, max_length=24, description="user password")
     first_name: str = Field(..., description="first name")
     last_name: str = Field(..., description="last_name")
-    birthday: date = Field(..., description="birtday")
+    birthday: date = Field(..., description="birthday")
     address: str = Field(..., description="address")
     phone_number: str = Field(..., description="phone_number")
 
@@ -148,6 +148,45 @@ class UpdateReview(CreateReview, metaclass=AllOptional):
 class RetrieveReview(CreateReview):
     id: int
     user: UserOut
+
+    class Config:
+        orm_mode = True
+
+
+class CreateRental(BaseModel):
+    name: str
+    issue_date: datetime
+    books: List[int]
+
+
+class UpdateRental(CreateRental, metaclass=AllOptional):
+    ...
+
+
+class RetrieveRental(CreateRental):
+    id: int
+    user: UserOut
+    return_date: Optional[datetime]
+    books: List[RetrieveBook]
+
+    class Config:
+        orm_mode = True
+
+
+class BaseUser(BaseModel):
+    first_name: str
+    last_name: str
+    birthday: date
+    address: str
+    phone_number: str
+
+class UpdateUser(BaseUser, metaclass=AllOptional):
+    ...
+
+class RetrieveUser(BaseUser):
+    id: int
+    rentals: List[RetrieveRental]
+    reviews: List[RetrieveReview]
 
     class Config:
         orm_mode = True

@@ -1,63 +1,33 @@
-from flask import jsonify, request, Blueprint
-from flask_jwt_extended import jwt_required
+from typing import List
 
-from app.constants import OFFSET, LIMIT
-from app.decorators import group_required
-from app.models import User
+from fastapi import APIRouter, Depends, Query
 
-users_bp = Blueprint('users', __name__, url_prefix='/users')
+from database import User
+from deps import get_current_librarian, get_current_user
+from schemas import RetrieveUser, UpdateUser
 
-
-@users_bp.route("/", methods=["GET"])
-@jwt_required()
-@group_required('admin')
-def get_users():
-    offset = request.args.get("offset", OFFSET)
-    limit = request.args.get("limit", LIMIT)
-    name = request.args.get("name")
-
-    if name:
-        users = User.find_by_name(name, offset, limit)
-    else:
-        users = User.list(offset, limit)
-    return jsonify([user.to_dict() for user in users])
+router = APIRouter(prefix='/users')
 
 
-@users_bp.route("/<user_id>", methods=["GET"])
-@jwt_required()
-@group_required('admin')
-def get_user(user_id):
+@router.get("/", response_model=List[RetrieveUser])
+async def list_users(offset: int = Query(0), limit: int = Query(default=100, lte=100)):
+    users = User.list(offset, limit)
+    return [RetrieveUser.from_orm(a) for a in users]
+
+
+@router.get("/{user_id}", response_model=RetrieveUser)
+async def get_user(user_id: int, _: User = Depends(get_current_librarian)) -> RetrieveUser:
     user = User.get(user_id)
-    if not user:
-        return jsonify({"message": "User not found."}), 404
-
-    return jsonify(user.to_dict())
+    return RetrieveUser.from_orm(user)
 
 
-@users_bp.route("/<user_id>", methods=["PATCH"])
-@jwt_required()
-def update_user(user_id):
-    birthday = request.json.get("birthday")
-    name = request.json.get("name")
-    address = request.json.get("address")
-    username = request.json.get("username")
-    email = request.json.get("address")
-
-    user = User.get(user_id)
-    if not user:
-        return jsonify({"message": "User not found."}), 404
-
-    if birthday:
-        user.birthday = birthday
-    if name:
-        user.name = name
-    if address:
-        user.address = address
-    if username:
-        user.username = username
-    if email:
-        user.email = email
-    user.save()
-    return jsonify(user.to_dict())
+@router.get("/me/", response_model=RetrieveUser)
+async def get_me(user: User = Depends(get_current_user)) -> RetrieveUser:
+    return RetrieveUser.from_orm(user)
 
 
+@router.patch("/me", response_model=RetrieveUser)
+async def update_user(user_data: UpdateUser, user: User = Depends(get_current_librarian)):
+    User.update(user.id, **dict(user_data))
+    user = User.get(user.id)
+    return RetrieveUser.from_orm(user)

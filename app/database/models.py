@@ -1,6 +1,6 @@
 import datetime
 
-from sqlalchemy import Column, String, Integer, DateTime, ForeignKey, Text, Boolean
+from sqlalchemy import Column, String, Integer, DateTime, ForeignKey, Text, Boolean, and_
 from sqlalchemy.orm import relationship
 
 from database.database import session, Base
@@ -10,7 +10,7 @@ from utils import get_hashed_password
 class User(Base):
     __tablename__ = "users"
 
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
     first_name = Column(String(50), nullable=False)
     last_name = Column(String(50), nullable=False)
     birthday = Column(DateTime, nullable=False)
@@ -50,10 +50,10 @@ class User(Base):
 class Rental(Base):
     __tablename__ = "rentals"
 
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String(50), nullable=False)
     issue_date = Column(DateTime, nullable=False)
-    return_date = Column(DateTime, nullable=False)
+    return_date = Column(DateTime, nullable=True)
     user_id = Column(Integer, ForeignKey('users.id'))
     books = relationship("Book", secondary='rental_books', back_populates='rentals')
 
@@ -65,15 +65,17 @@ class Rental(Base):
 
 class RentalBook(Base):
     __tablename__ = "rental_books"
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
     book_id = Column(Integer, ForeignKey('books.id', ondelete="CASCADE"), primary_key=True)
+
     rental_id = Column(Integer, ForeignKey('rentals.id', ondelete="CASCADE"), primary_key=True)
+    rental = relationship('Rental', primaryjoin='RentalBook.rental_id==Rental.id')
 
 
 class Book(Base):
     __tablename__ = "books"
 
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String(150), nullable=False)
     description = Column(Text, nullable=False)
     quantity = Column(Integer, nullable=False)
@@ -89,13 +91,14 @@ class Book(Base):
 
     @property
     def available_quantity(self):
-        return self.quantity - session.query(RentalBook).filter_by(book_id=self.id).count()
+        return self.quantity - session.query(RentalBook).filter(and_(RentalBook.book_id == self.id,
+                                                                     RentalBook.rental.has(return_date=None))).count()
 
 
 class Genre(Base):
     __tablename__ = "genres"
 
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String(150), nullable=False)
     books = relationship("Book", secondary='book_genres', back_populates='genres')
 
@@ -114,7 +117,7 @@ class BookGenre(Base):
 class Author(Base):
     __tablename__ = "authors"
 
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String(100), nullable=False)
     date_of_birth = Column(DateTime, nullable=False)
     date_of_death = Column(DateTime, nullable=True)
@@ -136,7 +139,7 @@ class BookAuthor(Base):
 class Review(Base):
     __tablename__ = "reviews"
 
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
     title = Column(String(200), nullable=False)
     created_at = Column(DateTime, nullable=False)
     rate = Column(Integer, nullable=False)
@@ -152,7 +155,7 @@ class Review(Base):
 
 class RevokedTokenModel(Base):
     __tablename__ = 'revoked_tokens'
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
     jti = Column(String(120))
     blacklisted_on = Column(DateTime, default=datetime.datetime.utcnow)
 
