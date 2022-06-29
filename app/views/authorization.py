@@ -1,6 +1,6 @@
 from fastapi import HTTPException, status, APIRouter, Depends
 
-from app.utils import verify_password, create_access_token, create_refresh_token
+from utils import verify_password, create_access_token, create_refresh_token
 from database import User, RevokedTokenModel
 from deps import get_current_user, token_data
 from schemas import UserAuth, UserOut, TokenSchema, UserSignup, TokenPayload

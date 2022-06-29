@@ -5,18 +5,16 @@ from fastapi import HTTPException, status, Header, Depends
 from jose import jwt
 from pydantic import ValidationError
 
+from config import Config
 from database import User, RevokedTokenModel
 from schemas import TokenPayload
-from utils import (
-    ALGORITHM,
-    JWT_SECRET_KEY
-)
+from utils import ALGORITHM
 
 
 async def token_data(authorization_token: Union[str, None] = Header(default=None)) -> TokenPayload:
     try:
         payload = jwt.decode(
-            authorization_token, JWT_SECRET_KEY, algorithms=[ALGORITHM]
+            authorization_token, Config.JWT_SECRET_KEY, algorithms=[ALGORITHM]
         )
 
         token_data = TokenPayload(**payload)
