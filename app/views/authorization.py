@@ -46,7 +46,7 @@ async def login(form_data: UserAuth):
 @router.post("/refresh")
 def post(user: User = Depends(get_current_user)):
     """Method for refreshing access token. Returns new access token."""
-    access_token = create_access_token(user.id, **user.additional_claims)
+    access_token = create_access_token(user.email, **user.additional_claims)
     return {'access_token': access_token}
 
 

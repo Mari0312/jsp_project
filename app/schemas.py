@@ -180,11 +180,14 @@ class BaseUser(BaseModel):
     address: str
     phone_number: str
 
+
 class UpdateUser(BaseUser, metaclass=AllOptional):
     ...
 
+
 class RetrieveUser(BaseUser):
     id: int
+    email: str
     rentals: List[RetrieveRental]
     reviews: List[RetrieveReview]
 

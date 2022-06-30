@@ -64,7 +64,7 @@ async def update_book(book_id: int, update_book: UpdateBook, _: User = Depends(g
 
 
 @router.delete("/{book_id}")
-async def delete(book_id: int, _: User = Depends(get_current_librarian)):
+async def delete_book(book_id: int, _: User = Depends(get_current_librarian)):
     count = Book.delete(book_id)
     if count:
         return {"message": "Deleted"}
@@ -90,7 +90,7 @@ async def get_genre(genre_id: int) -> RetrieveGenre:
 
 
 @router.delete("/genre/{genre_id}")
-async def delete(genre_id: int, _: User = Depends(get_current_librarian)):
+async def delete_genre(genre_id: int, _: User = Depends(get_current_librarian)):
     count = Genre.delete(genre_id)
     if count:
         return {"message": "Deleted"}
