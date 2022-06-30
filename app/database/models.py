@@ -1,9 +1,9 @@
 import datetime
 
-from sqlalchemy import Column, String, Integer, DateTime, ForeignKey, Text, Boolean, and_
+from sqlalchemy import Column, String, Integer, DateTime, ForeignKey, Text, Boolean, and_, Date
 from sqlalchemy.orm import relationship
 
-from database.database import session, Base
+from database import session, Base
 from utils import get_hashed_password
 
 
@@ -119,8 +119,8 @@ class Author(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String(100), nullable=False)
-    date_of_birth = Column(DateTime, nullable=False)
-    date_of_death = Column(DateTime, nullable=True)
+    date_of_birth = Column(Date, nullable=False)
+    date_of_death = Column(Date, nullable=True)
     biography = Column(Text, nullable=True)
     books = relationship("Book", secondary='book_authors', back_populates='authors')
 
@@ -141,7 +141,7 @@ class Review(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     title = Column(String(200), nullable=False)
-    created_at = Column(DateTime, nullable=False)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow, nullable=False)
     rate = Column(Integer, nullable=False)
     content = Column(Text, nullable=False)
     book_id = Column(Integer, ForeignKey('books.id', ondelete="CASCADE"))

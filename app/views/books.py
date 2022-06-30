@@ -45,7 +45,7 @@ async def create_book(create_book: CreatBook, _: User = Depends(get_current_libr
 
 @router.patch("/{book_id}", response_model=RetrieveBook)
 async def update_book(book_id: int, update_book: UpdateBook, _: User = Depends(get_current_librarian)) -> RetrieveBook:
-    data = dict(update_book)
+    data = update_book.dict(exclude_unset=True)
     genres = data.pop('genres')
     authors = data.pop('authors')
     Book.update(book_id, **data)
@@ -89,15 +89,15 @@ async def get_genre(genre_id: int) -> RetrieveGenre:
     return RetrieveGenre.from_orm(genre)
 
 
-@router.delete("/genre/{genre_id}")
+@router.delete("/genres/{genre_id}")
 async def delete_genre(genre_id: int, _: User = Depends(get_current_librarian)):
     count = Genre.delete(genre_id)
     if count:
         return {"message": "Deleted"}
-    return ({"message": "Not found"}), 404
+    return {"message": "Not found"}, 404
 
 
-@router.post("/<book_id>/reviews/", response_model=RetrieveReview)
+@router.post("/{book_id}/reviews/", response_model=RetrieveReview)
 async def create_review(book_id: int, create_review: CreateReview, user: User = Depends(get_current_user)):
     review = Review(**dict(create_review), book_id=book_id, user_id=user.id).save()
     return RetrieveReview.from_orm(review)
@@ -111,8 +111,7 @@ async def update_review(review_id: int, review_data: UpdateReview, user: User = 
             status_code=status.HTTP_403_FORBIDDEN,
             detail='User does not have permissions',
         )
-
-    Review.update(review_id, **dict(review_data))
+    Review.update(review_id, **review_data.dict(exclude_unset=True))
     review = Review.get(review_id)
     return RetrieveReview.from_orm(review)
 

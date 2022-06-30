@@ -1,5 +1,3 @@
-import dotenv
-
 from fastapi import FastAPI
 from starlette.middleware.cors import CORSMiddleware
 
@@ -8,8 +6,6 @@ from views.authorization import router as auth_router
 from views.books import router as book_router
 from views.rental import router as rental_router
 from views.users import router as user_router
-
-dotenv.load_dotenv()
 
 app = FastAPI()
 

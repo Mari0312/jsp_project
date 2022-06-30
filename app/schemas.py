@@ -19,9 +19,9 @@ class BaseModel(BaseModel_):
 
 class CreateAuthor(BaseModel):
     name: str
-    date_of_birth: datetime
-    date_of_death: datetime = None
-    biography: str = None
+    date_of_birth: date
+    date_of_death: Optional[date] = None
+    biography: Optional[str] = None
 
 
 class BaseAuthor(BaseModel):
@@ -136,7 +136,6 @@ class RetrieveBook(CreatBook):
 
 class CreateReview(BaseModel):
     title: str
-    created_at: datetime
     rate: int
     content: str
 

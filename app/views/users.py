@@ -28,6 +28,6 @@ async def get_me(user: User = Depends(get_current_user)) -> RetrieveUser:
 
 @router.patch("/me", response_model=RetrieveUser)
 async def update_user(user_data: UpdateUser, user: User = Depends(get_current_librarian)):
-    User.update(user.id, **dict(user_data))
+    User.update(user.id, **user_data.dict(exclude_unset=True))
     user = User.get(user.id)
     return RetrieveUser.from_orm(user)

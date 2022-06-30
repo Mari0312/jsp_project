@@ -4,19 +4,24 @@ import pytest
 from fastapi.testclient import TestClient
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 
+from config import Config
 
 TEST_DATABASE_NAME = 'jsp_test_db'
 TEST_EMAIL = "test@example.com"
 TEST_PASSWORD = "test@example.com"
 LIBRARIAN_TEST_EMAIL = "librariantest@example.com"
+path, _ = os.environ['TEST_DB_STRING'].rsplit('/', 1)
+Config.SQLALCHEMY_DATABASE_URI = f'{path}/{TEST_DATABASE_NAME}'
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture(autouse=True, scope='function')
 def clear_db():
     from alembic.command import upgrade
     from alembic.config import Config
+    from database import session, db
     import psycopg2
-
+    session.close()
+    db.dispose()
     conn = psycopg2.connect(dsn=os.environ['TEST_DB_STRING'])
     conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
     cursor = conn.cursor()
@@ -24,8 +29,6 @@ def clear_db():
     cursor.execute(f'CREATE DATABASE {TEST_DATABASE_NAME}')
     cursor.close()
 
-    path, _ = os.environ['TEST_DB_STRING'].rsplit('/', 1)
-    os.environ['DB_STRING'] = f'{path}/{TEST_DATABASE_NAME}'
     config = Config("alembic.ini")
     upgrade(config, "head")
 

@@ -1,11 +1,11 @@
-from .database import Base, db_string
+from .database import Base, session, db
 from .models import (
     RentalBook, User, Rental, Genre, RevokedTokenModel, Review,
     BookAuthor, Book, Author, BookGenre,
 )
 
 __all__ = [
-    'Base', 'db_string',
+    'Base', 'session', 'db',
     'RentalBook', 'User', 'Rental', 'Genre', 'RevokedTokenModel', 'Review',
     'BookAuthor', 'Book', 'Author', 'BookGenre',
 ]

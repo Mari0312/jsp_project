@@ -26,12 +26,12 @@ async def get_author(author_id: int) -> RetrieveAuthor:
 
 @router.post("/", response_model=RetrieveAuthor)
 async def create_author(author_data: CreateAuthor, _: User = Depends(get_current_librarian)):
-    author = Author(**dict(author_data)).save()
+    author = Author(**author_data.dict(exclude_unset=True)).save()
     return RetrieveAuthor.from_orm(author)
 
 
 @router.patch("/{author_id}", response_model=RetrieveAuthor)
 async def update_author(author_id: int, author_data: UpdateAuthor, _: User = Depends(get_current_librarian)):
-    Author.update(author_id, **dict(author_data))
+    Author.update(author_id, **author_data.dict(exclude_unset=True))
     author = Author.get(author_id)
     return RetrieveAuthor.from_orm(author)
